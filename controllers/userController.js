@@ -8,24 +8,50 @@ const userRegisterController = async (req, res) => {
         const { name, email, password } = req.body;
 
         if (!name || !email || !password) {
-            return res.status(400).json({ message: 'Invalid Argument passed' });
+            return res.status(400).json({ message: 'Invalid Parameter Passed' }); // return if any of attribute is missing
         }
 
-        const existingUser = await User.find({ email });
-        console.log("existingUser", existingUser)
-        if (existingUser.length > 0) {
-            return res.status(400).json({ message: 'User Already exists' })
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(400).json({ message: 'User Already exists' }); // check if user already exists
         }
 
-        req.body.password = await bcrypt.hash(req.body.password, 10);
-        const token = await jwt.sign({ email: req.email }, SECRET);
+        req.body.password = await bcrypt.hash(req.body.password, 10); // encrypt password
 
-        const user = await User.create({ ...req.body, token });
+        const user = new User(req.body); // create instance of modal/schema
+        const savedUser = await user.save(); // save the user to database
 
-        return res.json({ id: user._id, name: user.name, email: user.email, token: user.token });
+        const token = await jwt.sign({ email: savedUser.email, id: savedUser._id }, SECRET); // generate token based on id and email
+
+        return res.json({ message: 'User Created SuccessFully', data: { id: savedUser._id, name: savedUser.name, email: savedUser.email, token } });
     } catch (err) {
         console.log(err)
         res.status(400).json({ err });
     }
 }
-module.exports = { userRegisterController };
+
+const userLoginController = async (req, res) => {
+    try {
+        const { email, password } = req.body;
+
+        if (!email || !password) {
+            return res.status(404).json({ message: 'Invalid Parameter Passed' }); // return if any of attribute is missing
+        }
+
+        const userExist = await User.findOne({ email }); // check if the user exists
+        if (userExist) {
+            const match = await bcrypt.compare(req.body.password, userExist.password); // compare plain password with bycypt (encrypted stored) password
+
+            if (match) {
+                const token = await jwt.sign({ email: userExist.email, id: userExist._id }, SECRET);
+                return res.status(200).json({ message: 'User Login SuccessFully', data: { id: userExist._id, name: userExist.name, email: userExist.email, token } });
+            } else {
+                return res.status(400).json({ message: 'Invalid credentials' });
+            }
+        }
+        return res.status(400).json({ message: 'User Does not Exist' });
+    } catch (err) {
+
+    }
+}
+module.exports = { userRegisterController, userLoginController };
