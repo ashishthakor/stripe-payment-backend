@@ -2,6 +2,7 @@ const User = require('../modals/user');
 const bcrypt = require('bcrypt');
 const SECRET = process.env.SECRET;
 const jwt = require('jsonwebtoken');
+const stripe = require('../helpers/stripe.helper');
 
 const userRegisterController = async (req, res) => {
     try {
@@ -15,10 +16,14 @@ const userRegisterController = async (req, res) => {
         if (existingUser) {
             return res.status(400).json({ message: 'User Already exists' }); // check if user already exists
         }
-
         req.body.password = await bcrypt.hash(req.body.password, 10); // encrypt password
 
-        const user = new User(req.body); // create instance of modal/schema
+        const stripeUser = await stripe.createCustomer(email, name);
+        if(!stripeUser){
+            return res.status(500).json({ message: 'Error while creating stripe customer'});
+        }
+
+        const user = new User({...req.body, stripe_customer_id : stripeUser.id}); // create instance of modal/schema
         const savedUser = await user.save(); // save the user to database
 
         const token = await jwt.sign({ email: savedUser.email, id: savedUser._id }, SECRET); // generate token based on id and email
