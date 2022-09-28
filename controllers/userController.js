@@ -99,4 +99,18 @@ const createCardController = async (req, res) => {
     }
 }
 
-module.exports = { userRegisterController, userLoginController, createCardController };
+const setDefaultCard = async (req, res) => {
+    try {
+        const { cardId } = req.body;
+        const { stripe_customer_id } = req.user;
+        if (!cardId) return res.status(400).json({ message: 'Please Pass CardId' });
+
+        const updatedCustomer = await stripe.updateDefaultCard(stripe_customer_id, cardId);
+        return res.status(200).json({ message: 'Stripe User Updated SuccessFully', data: updatedCustomer });
+
+    } catch (err) {
+        return res.status(500).json({ message: err.message || 'Server Error' });
+    }
+}
+
+module.exports = { userRegisterController, userLoginController, createCardController, setDefaultCard };

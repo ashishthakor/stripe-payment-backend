@@ -23,3 +23,7 @@ exports.listAllCustomer = async (email) => {
 exports.listAllCard = async (custId) => {
     return await stripe.customers.listSources(custId, { object: 'card' });
 }
+
+exports.updateDefaultCard = async (custId, catdId) => {
+    return await stripe.customers.update(custId, { default_source: catdId });
+}
