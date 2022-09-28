@@ -26,7 +26,7 @@ const userRegisterController = async (req, res) => {
         const user = new User({ ...req.body, stripe_customer_id: stripeUser.id }); // create instance of modal/schema
         const savedUser = await user.save(); // save the user to database
 
-        const token = await jwt.sign({ email: savedUser.email, id: savedUser._id }, SECRET); // generate token based on id and email
+        const token = await jwt.sign({ user: savedUser }, SECRET); // generate token based on user
 
         return res.json({ message: 'User Created SuccessFully', data: { id: savedUser._id, name: savedUser.name, email: savedUser.email, stripe_customer_id: savedUser.stripe_customer_id, token } });
     } catch (err) {
@@ -48,7 +48,7 @@ const userLoginController = async (req, res) => {
             const match = await bcrypt.compare(req.body.password, userExist.password); // compare plain password with bycypt (encrypted stored) password
 
             if (match) {
-                const token = await jwt.sign({ email: userExist.email, id: userExist._id }, SECRET);
+                const token = await jwt.sign({ user: userExist }, SECRET);
                 return res.status(200).json({ message: 'User Login SuccessFully', data: { id: userExist._id, name: userExist.name, email: userExist.email, stripe_customer_id: userExist.stripe_customer_id, token } });
             } else {
                 return res.status(400).json({ message: 'Invalid credentials' });
@@ -59,4 +59,35 @@ const userLoginController = async (req, res) => {
 
     }
 }
-module.exports = { userRegisterController, userLoginController };
+
+const generateCardToken = async (card) => { // generate a token for the card
+    try {
+        return await stripe.createCardToken(card);
+    } catch (err) {
+        return res.status(500).json({ message: err.message || 'Error while generating token for card' });
+    }
+}
+
+const createCardController = async (req, res) => {
+    try {
+        const { card } = req.body; // card object: { number, exp_month, exp_year, cvc}
+
+        if (!card || !card.number || !card.exp_month || !card.exp_year || !card.cvc) {
+            return res.status(400).json({ message: 'Please pass card Informatoin' }); // return if any of attribute is missing
+        }
+
+        const cardToken = await generateCardToken(card);
+        if (cardToken) {
+
+            const card = await stripe.createCard(req.user.stripe_customer_id, cardToken.id); // creating card to stripe_customer_id in stripe
+            await User.findByIdAndUpdate(req.user._id, { $push: { cards: card.id } }) // add that card id to mongodb database in our user modal
+
+            return res.status(200).json({ message: 'Card Create Successfully', data: { card } });
+        }
+
+    } catch (err) {
+        return res.status(500).json({ message: err.message || 'Server Error' });
+    }
+}
+
+module.exports = { userRegisterController, userLoginController, createCardController };

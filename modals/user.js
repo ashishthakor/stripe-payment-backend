@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const UserSchema  = new mongoose.Schema({
+const UserSchema = new mongoose.Schema({
   name: {
     type: String,
     required: true
@@ -16,6 +16,11 @@ const UserSchema  = new mongoose.Schema({
   stripe_customer_id: {
     type: String,
     required: true
+  },
+  cards: {
+    type: [{
+      type: String
+    }],
   },
 });
 
