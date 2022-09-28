@@ -19,3 +19,7 @@ exports.createCard = async (custId, tokenId) => {
 exports.listAllCustomer = async (email) => {
     return await stripe.customers.list({ email });
 }
+
+exports.listAllCard = async (custId) => {
+    return await stripe.customers.listSources(custId, { object: 'card' });
+}

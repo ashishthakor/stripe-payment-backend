@@ -20,8 +20,11 @@ const userRegisterController = async (req, res) => {
 
         const stripeCustomers = await stripe.listAllCustomer(email); // checking whether user available in stripe based on this id if then no need to create new customer in stripe(it is optional)
         let user;
+        let fetchedCards = [];
         if (stripeCustomers.data.length > 0) {
-            user = new User({ ...req.body, stripe_customer_id: stripeCustomers.data[0].id }); // create instance of modal/schema
+            const stripeCustomersCards = await stripe.listAllCard(stripeCustomers.data[0].id);
+            stripeCustomersCards.data.map((card) => fetchedCards.push(card.id));
+            user = new User({ ...req.body, stripe_customer_id: stripeCustomers.data[0].id, cards: fetchedCards }); // create instance of modal/schema
         }
         else {
             const stripeUser = await stripe.createCustomer(email, name);
@@ -34,7 +37,7 @@ const userRegisterController = async (req, res) => {
 
         const token = await jwt.sign({ user: savedUser }, SECRET); // generate token based on user
 
-        return res.json({ message: 'User Created SuccessFully', data: { id: savedUser._id, name: savedUser.name, email: savedUser.email, stripe_customer_id: savedUser.stripe_customer_id, token } });
+        return res.json({ message: 'User Created SuccessFully', data: { id: savedUser._id, name: savedUser.name, email: savedUser.email, stripe_customer_id: savedUser.stripe_customer_id, cards: savedUser.cards, token } });
     } catch (err) {
         console.log(err)
         res.status(500).json({ message: err.message || 'Server Error' });
@@ -55,7 +58,7 @@ const userLoginController = async (req, res) => {
 
             if (match) {
                 const token = await jwt.sign({ user: userExist }, SECRET);
-                return res.status(200).json({ message: 'User Login SuccessFully', data: { id: userExist._id, name: userExist.name, email: userExist.email, stripe_customer_id: userExist.stripe_customer_id, token } });
+                return res.status(200).json({ message: 'User Login SuccessFully', data: { id: userExist._id, name: userExist.name, email: userExist.email, stripe_customer_id: userExist.stripe_customer_id, cards: userExist.cards, token } });
             } else {
                 return res.status(400).json({ message: 'Invalid credentials' });
             }
