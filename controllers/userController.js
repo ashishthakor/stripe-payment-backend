@@ -18,12 +18,18 @@ const userRegisterController = async (req, res) => {
         }
         req.body.password = await bcrypt.hash(req.body.password, 10); // encrypt password
 
-        const stripeUser = await stripe.createCustomer(email, name);
-        if (!stripeUser) {
-            return res.status(500).json({ message: 'Error while creating stripe customer' });
+        const stripeCustomers = await stripe.listAllCustomer(email); // checking whether user available in stripe based on this id if then no need to create new customer in stripe(it is optional)
+        let user;
+        if (stripeCustomers.data.length > 0) {
+            user = new User({ ...req.body, stripe_customer_id: stripeCustomers.data[0].id }); // create instance of modal/schema
         }
-
-        const user = new User({ ...req.body, stripe_customer_id: stripeUser.id }); // create instance of modal/schema
+        else {
+            const stripeUser = await stripe.createCustomer(email, name);
+            if (!stripeUser) {
+                return res.status(500).json({ message: 'Error while creating stripe customer' });
+            }
+            user = new User({ ...req.body, stripe_customer_id: stripeUser.id }); // create instance of modal/schema
+        }
         const savedUser = await user.save(); // save the user to database
 
         const token = await jwt.sign({ user: savedUser }, SECRET); // generate token based on user
@@ -31,7 +37,7 @@ const userRegisterController = async (req, res) => {
         return res.json({ message: 'User Created SuccessFully', data: { id: savedUser._id, name: savedUser.name, email: savedUser.email, stripe_customer_id: savedUser.stripe_customer_id, token } });
     } catch (err) {
         console.log(err)
-        res.status(400).json({ err });
+        res.status(500).json({ message: err.message || 'Server Error' });
     }
 }
 
