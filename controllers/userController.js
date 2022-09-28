@@ -98,7 +98,7 @@ const createCardController = async (req, res) => {
     }
 }
 
-const setDefaultCard = async (req, res) => {
+const setDefaultCardController = async (req, res) => {
     try {
         const { cardId } = req.body;
         const { stripe_customer_id } = req.user;
@@ -112,7 +112,7 @@ const setDefaultCard = async (req, res) => {
     }
 }
 
-const retrieveAllCard = async (req, res) => {
+const retrieveAllCardController = async (req, res) => {
     try {
         const { stripe_customer_id } = req.user;
         const stripeCustomersCards = await stripe.listAllCard(stripe_customer_id);
@@ -123,4 +123,24 @@ const retrieveAllCard = async (req, res) => {
     }
 };
 
-module.exports = { userRegisterController, userLoginController, createCardController, setDefaultCard, retrieveAllCard };
+const deleteCardController = async (req, res) => {
+    try {
+        const { stripe_customer_id: custId, _id, cards } = req.user;
+        const { cardId } = req.body;
+        // return console.log(req.user);
+        if (!cardId) {
+            return res.status(400).json({ message: 'Please Pass CardId' });
+        }
+
+        const deletedCard = await stripe.deleteCard(custId, cardId);
+        const updatedCards = cards.filter((c) => c !== deletedCard.id);
+        if (deletedCard) {
+            await User.findByIdAndUpdate(_id, { cards: [...updatedCards] });
+        }
+        return res.status(200).json({ message: 'Card deleted successfully', data: deletedCard });
+    } catch (err) {
+        return res.status(500).json({ message: err.message || 'Server Error' });
+    }
+}
+
+module.exports = { userRegisterController, userLoginController, createCardController, setDefaultCardController, retrieveAllCardController, deleteCardController };

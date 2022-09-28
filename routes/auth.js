@@ -1,5 +1,5 @@
 const express = require('express');
-const { userRegisterController, userLoginController, createCardController, setDefaultCard, retrieveAllCard } = require('../controllers/userController');
+const { userRegisterController, userLoginController, createCardController, setDefaultCardController, retrieveAllCardController, deleteCardController } = require('../controllers/userController');
 const auth = require('../middleware/auth');
 const router = express.Router();
 
@@ -8,8 +8,9 @@ router.post('/register', userRegisterController);
 router.post('/login', userLoginController);
 
 router.post('/create-card', auth, createCardController);
-router.post('/update-default-card', auth, setDefaultCard);
-router.get('/retrieve-cards', auth, retrieveAllCard);
+router.post('/update-default-card', auth, setDefaultCardController);
+router.get('/retrieve-cards', auth, retrieveAllCardController);
+router.delete('/delete-card', auth, deleteCardController);
 
 // router.get('/test', auth, (req, res) => {
 //     console.log('in callback function')

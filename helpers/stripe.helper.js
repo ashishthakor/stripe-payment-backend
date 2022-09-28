@@ -27,3 +27,6 @@ exports.listAllCard = async (custId) => {
 exports.updateDefaultCard = async (custId, catdId) => {
     return await stripe.customers.update(custId, { default_source: catdId });
 }
+exports.deleteCard = async (custId, cardId) => {
+    return await stripe.customers.deleteSource(custId, cardId);
+}
