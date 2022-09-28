@@ -19,16 +19,16 @@ const userRegisterController = async (req, res) => {
         req.body.password = await bcrypt.hash(req.body.password, 10); // encrypt password
 
         const stripeUser = await stripe.createCustomer(email, name);
-        if(!stripeUser){
-            return res.status(500).json({ message: 'Error while creating stripe customer'});
+        if (!stripeUser) {
+            return res.status(500).json({ message: 'Error while creating stripe customer' });
         }
 
-        const user = new User({...req.body, stripe_customer_id : stripeUser.id}); // create instance of modal/schema
+        const user = new User({ ...req.body, stripe_customer_id: stripeUser.id }); // create instance of modal/schema
         const savedUser = await user.save(); // save the user to database
 
         const token = await jwt.sign({ email: savedUser.email, id: savedUser._id }, SECRET); // generate token based on id and email
 
-        return res.json({ message: 'User Created SuccessFully', data: { id: savedUser._id, name: savedUser.name, email: savedUser.email, token } });
+        return res.json({ message: 'User Created SuccessFully', data: { id: savedUser._id, name: savedUser.name, email: savedUser.email, stripe_customer_id: savedUser.stripe_customer_id, token } });
     } catch (err) {
         console.log(err)
         res.status(400).json({ err });
@@ -49,7 +49,7 @@ const userLoginController = async (req, res) => {
 
             if (match) {
                 const token = await jwt.sign({ email: userExist.email, id: userExist._id }, SECRET);
-                return res.status(200).json({ message: 'User Login SuccessFully', data: { id: userExist._id, name: userExist.name, email: userExist.email, token } });
+                return res.status(200).json({ message: 'User Login SuccessFully', data: { id: userExist._id, name: userExist.name, email: userExist.email, stripe_customer_id: userExist.stripe_customer_id, token } });
             } else {
                 return res.status(400).json({ message: 'Invalid credentials' });
             }
